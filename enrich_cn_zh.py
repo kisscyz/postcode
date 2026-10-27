@@ -17,8 +17,19 @@ import os
 import re
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DUMP = os.path.join(BASE, "data-src", "CN.txt")
+DUMP = os.path.join(BASE, "data-src", "CN-gazetteer.txt")
 CN_JSON = os.path.join(BASE, "data", "CN.json")
+
+# Characters that only appear in Traditional Chinese. Used to prefer the
+# Simplified form when GeoNames lists both (自贡市 over 自貢市): a search
+# typed in Simplified would otherwise miss the Traditional entry.
+TRAD_CHARS = set(
+    "貢區縣長門廣廠邊達遠選關頭衛設許認議論戰權觀歡難親讓價錢"
+    "鐵銅錫錦鎮鏡顯靈寶實龍龜鳳學國會臺灣嶼巖巒峯嶽崗嶺濱瀋"
+    "遼遷遺郵鄉鄰鄭鄧鄂魯齊劉楊張陳黃週幾機飛餘餓憂優傷創產"
+    "復齊齋歲歸塵葉葉業極樂樂榮營縈樓夢夢聲處備復複覓覺覽"
+    "親親親親"
+)
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
 SUFFIXES = (" autonomous region", " province", " xian", " shi", " qu",
@@ -46,13 +57,17 @@ def zh_name(alternates, name):
     # Prefer the longest purely-Chinese alternate: 呼和浩特市 over 呼市,
     # 锡林郭勒盟 over 锡林. This also drops kana/hangul alternates
     # (e.g. オルドス市) that merely contain a CJK suffix character.
+    # When both Simplified and Traditional forms exist, prefer Simplified
+    # (自贡市 over 自貢市) so Simplified searches match.
     pure = []
     for a in alternates.split(","):
         a = a.strip()
         if a and all("\u4e00" <= ch <= "\u9fff" for ch in a):
             pure.append(a)
     if pure:
-        return max(pure, key=len)
+        simp = [a for a in pure if not any(ch in TRAD_CHARS for ch in a)]
+        pool = simp if simp else pure
+        return max(pool, key=len)
     if name and all("\u4e00" <= ch <= "\u9fff" for ch in name.strip()):
         return name.strip()
     return None
