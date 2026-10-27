@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全球邮编查询 | Postcode Lookup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #1c1e21; min-height: 100vh; }
+  header { background: linear-gradient(135deg, #1877f2, #0d5fc4); color: #fff; padding: 34px 20px 26px; text-align: center; }
+  header h1 { font-size: 28px; letter-spacing: 1px; }
+  header p { margin-top: 8px; font-size: 14px; opacity: .9; }
+  main { max-width: 880px; margin: 0 auto; padding: 20px 16px 40px; }
+  .search-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 20px; margin-top: -4px; }
+  .search-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  select, input[type="text"] { font-size: 16px; padding: 12px 14px; border: 1px solid #ccd0d5; border-radius: 8px; outline: none; background: #fff; color: #1c1e21; }
+  select:focus, input[type="text"]:focus { border-color: #1877f2; box-shadow: 0 0 0 2px rgba(24,119,242,.18); }
+  select { flex: 0 1 190px; cursor: pointer; }
+  input[type="text"] { flex: 1 1 260px; }
+  button.search-btn { flex: 0 0 auto; font-size: 16px; padding: 12px 26px; border: none; border-radius: 8px; background: #1877f2; color: #fff; cursor: pointer; font-weight: 600; }
+  button.search-btn:hover { background: #0d65d9; }
+  .examples { margin-top: 14px; font-size: 13px; color: #65676b; }
+  .examples span { margin-right: 4px; }
+  .chip { display: inline-block; margin: 4px 6px 0 0; padding: 5px 12px; border-radius: 999px; background: #e7f3ff; color: #1877f2; cursor: pointer; font-size: 13px; }
+  .chip:hover { background: #d0e6ff; }
+  .stats { margin: 16px 4px 0; font-size: 13px; color: #65676b; }
+  .status { margin: 18px 4px 0; font-size: 14px; color: #65676b; text-align: center; padding: 30px 0; }
+  .results { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .row { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.06); padding: 14px 16px; display: flex; gap: 14px; align-items: flex-start; }
+  .row .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 19px; font-weight: 700; color: #1877f2; white-space: nowrap; min-width: 96px; }
+  .row .info { flex: 1; min-width: 0; }
+  .row .place { font-size: 16px; font-weight: 600; }
+  .row .admin { font-size: 13px; color: #65676b; margin-top: 3px; line-height: 1.5; }
+  .row .coords { font-size: 13px; color: #65676b; margin-top: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .row .actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+  .row .actions a, .row .actions button { font-size: 13px; padding: 6px 12px; border-radius: 6px; text-align: center; cursor: pointer; text-decoration: none; }
+  .row .actions a { background: #e7f3ff; color: #1877f2; }
+  .row .actions a:hover { background: #d0e6ff; }
+  .row .actions button { border: 1px solid #ccd0d5; background: #fff; color: #1c1e21; }
+  .row .actions button:hover { background: #f0f2f5; }
+  mark { background: #ffe58a; color: inherit; border-radius: 2px; padding: 0 1px; }
+  footer { text-align: center; font-size: 12px; color: #8a8d91; line-height: 1.8; padding: 0 16px 30px; }
+  footer a { color: #1877f2; text-decoration: none; }
+  @media (max-width: 560px) {
+    header h1 { font-size: 23px; }
+    select { flex: 1 1 100%; }
+    input[type="text"] { flex: 1 1 100%; }
+    button.search-btn { flex: 1 1 100%; }
+    .row { flex-wrap: wrap; }
+    .row .actions { flex-direction: row; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌍 全球邮编查询</h1>
+  <p>输入邮编或地名，查地名、行政区划与经纬度</p>
+</header>
+<main>
+  <div class="search-card">
+    <div class="search-row">
+      <select id="country"></select>
+      <input type="text" id="q" placeholder="输入邮编，如 10001，或地名，如 New York" autocomplete="off">
+      <button class="search-btn" id="go">查询</button>
+    </div>
+    <div class="examples">
+      <span>试试：</span>
+      <span class="chip" data-cc="US" data-q="10001">10001 · 美国纽约</span>
+      <span class="chip" data-cc="GB" data-q="SW1A">SW1A · 英国伦敦</span>
+      <span class="chip" data-cc="DE" data-q="10115">10115 · 德国柏林</span>
+      <span class="chip" data-cc="FR" data-q="75001">75001 · 法国巴黎</span>
+      <span class="chip" data-cc="JP" data-q="100-0001">100-0001 · 日本东京</span>
+      <span class="chip" data-cc="CN" data-q="100000">100000 · 中国北京</span>
+    </div>
+  </div>
+  <div class="stats" id="stats">正在加载国家列表…</div>
+  <div class="status" id="status">选择国家，输入邮编或地名开始查询。</div>
+  <div class="results" id="results"></div>
+</main>
+<footer>
+  数据来源 <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a>（CC BY 4.0），每日更新 · 数据按原样提供，仅供参考<br>
+  演示版覆盖 11 个国家；完整版将覆盖 GeoNames 全部国家数据
+</footer>
+<script>
+var cache = {};
+var current = null;
+var LIMIT = 60;
+
+function el(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function normCode(s) { return s.toUpperCase().replace(/[\s\-]/g, ""); }
+function mark(text, query, isCode) {
+  var t = esc(text);
+  if (!query) return t;
+  var src = isCode ? normCode(text) : text.toLowerCase();
+  var q = isCode ? normCode(query) : query.toLowerCase();
+  if (!q) return t;
+  var idx = src.indexOf(q);
+  if (idx < 0) return t;
+  if (isCode) {
+    // code display may contain spaces/hyphens; fall back to plain text
+    return t;
+  }
+  return esc(text.slice(0, idx)) + "<mark>" + esc(text.slice(idx, idx + query.length)) + "</mark>" + esc(text.slice(idx + query.length));
+}
+
+function loadIndex() {
+  fetch("data/index.json").then(function (r) { return r.json(); }).then(function (idx) {
+    var sel = el("country");
+    idx.countries.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.cc;
+      o.textContent = c.name + " · " + c.nameEn + "（" + c.count.toLocaleString() + "）";
+      sel.appendChild(o);
+    });
+    el("stats").textContent = "演示版：已收录 " + idx.countries.length + " 个国家，共 " +
+      idx.total.toLocaleString() + " 条邮编 · 数据更新于 " + idx.updated;
+    sel.value = "US";
+    loadCountry("US");
+  }).catch(function () {
+    el("stats").textContent = "国家列表加载失败，请刷新重试。";
+  });
+}
+
+function loadCountry(cc) {
+  if (cache[cc]) return Promise.resolve(cache[cc]);
+  el("status").style.display = "block";
+  el("status").textContent = "正在加载数据…";
+  el("results").innerHTML = "";
+  return fetch("data/" + cc + ".json").then(function (r) { return r.json(); }).then(function (d) {
+    d.records.forEach(function (rec) {
+      rec._n = normCode(rec[0]);
+      rec._p = rec[1].toLowerCase();
+      rec._a = ((rec[2] || "") + " " + (rec[3] || "") + " " + (rec[4] || "")).toLowerCase();
+    });
+    cache[cc] = d;
+    return d;
+  });
+}
+
+function search() {
+  var cc = el("country").value;
+  var q = el("q").value.trim();
+  if (q.length < 2) {
+    el("status").style.display = "block";
+    el("status").textContent = "至少输入 2 个字符。";
+    el("results").innerHTML = "";
+    return;
+  }
+  el("status").style.display = "block";
+  el("status").textContent = "查询中…";
+  loadCountry(cc).then(function (d) {
+    var nq = normCode(q);
+    var lq = q.toLowerCase();
+    var hits = [];
+    for (var i = 0; i < d.records.length; i++) {
+      var r = d.records[i];
+      var score = 0;
+      if (r._n === nq) score = 100;
+      else if (r._n.indexOf(nq) === 0) score = 90;
+      else if (nq.indexOf(r._n) === 0 && r._n.length >= 3) score = 85;
+      else if (r._p === lq) score = 80;
+      else if (r._p.indexOf(lq) === 0) score = 70;
+      else if (r._p.indexOf(lq) >= 0) score = 60;
+      else if (r._a.indexOf(lq) >= 0) score = 40;
+      if (score > 0) hits.push([score, r]);
+    }
+    hits.sort(function (a, b) {
+      return b[0] - a[0] || (a[1][0] < b[1][0] ? -1 : a[1][0] > b[1][0] ? 1 : 0);
+    });
+    render(hits.slice(0, LIMIT), hits.length, q, d);
+  }).catch(function () {
+    el("status").textContent = "数据加载失败，请刷新重试。";
+  });
+}
+
+function render(hits, total, q, d) {
+  var box = el("results");
+  box.innerHTML = "";
+  if (!hits.length) {
+    el("status").style.display = "block";
+    el("status").textContent = "在" + d.name + "没有找到与“" + q + "”匹配的结果，换个写法试试。";
+    return;
+  }
+  el("status").style.display = "none";
+  var head = document.createElement("div");
+  head.className = "stats";
+  head.style.margin = "0 4px";
+  head.textContent = "找到 " + total.toLocaleString() + " 条" + (total > LIMIT ? "，仅显示前 " + LIMIT + " 条" : "");
+  box.appendChild(head);
+  hits.forEach(function (h) {
+    var r = h[1];
+    var admin = [r[4], r[3], r[2]].filter(Boolean).join(" · ");
+    var div = document.createElement("div");
+    div.className = "row";
+    div.innerHTML =
+      '<div class="code">' + esc(r[0]) + '</div>' +
+      '<div class="info">' +
+        '<div class="place">' + mark(r[1], q, false) + '</div>' +
+        (admin ? '<div class="admin">' + esc(admin) + " · " + esc(d.name) + " " + esc(d.nameEn) + '</div>' : "") +
+        '<div class="coords">' + r[5] + ", " + r[6] + '</div>' +
+      '</div>' +
+      '<div class="actions">' +
+        '<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + r[5] + '&mlon=' + r[6] + '#map=13/' + r[5] + '/' + r[6] + '">地图</a>' +
+        '<button data-copy="' + esc(r[0] + " " + r[1] + (admin ? ", " + admin : "") + ", " + r[5] + ", " + r[6]) + '">复制</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+  box.querySelectorAll("button[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var txt = b.getAttribute("data-copy");
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(txt).then(function () {
+          b.textContent = "已复制";
+          setTimeout(function () { b.textContent = "复制"; }, 1200);
+        });
+      }
+    });
+  });
+}
+
+var timer = null;
+el("q").addEventListener("input", function () {
+  clearTimeout(timer);
+  timer = setTimeout(search, 300);
+});
+el("q").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { clearTimeout(timer); search(); }
+});
+el("go").addEventListener("click", search);
+el("country").addEventListener("change", function () {
+  current = null;
+  if (el("q").value.trim().length >= 2) search();
+  else { el("status").style.display = "block"; el("status").textContent = "选择国家，输入邮编或地名开始查询。"; el("results").innerHTML = ""; }
+});
+document.querySelectorAll(".chip").forEach(function (c) {
+  c.addEventListener("click", function () {
+    el("country").value = c.getAttribute("data-cc");
+    el("q").value = c.getAttribute("data-q");
+    search();
+    el("q").focus();
+  });
+});
+loadIndex();
+</script>
+</body>
+</html>
