@@ -30,6 +30,7 @@
   .row .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 19px; font-weight: 700; color: #1877f2; white-space: nowrap; min-width: 96px; }
   .row .info { flex: 1; min-width: 0; }
   .row .place { font-size: 16px; font-weight: 600; }
+  .row .place .pinyin { font-size: 13px; color: #65676b; font-weight: 400; margin-left: 6px; }
   .row .admin { font-size: 13px; color: #65676b; margin-top: 3px; line-height: 1.5; }
   .row .coords { font-size: 13px; color: #65676b; margin-top: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .row .actions { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
@@ -60,7 +61,7 @@
   <div class="search-card">
     <div class="search-row">
       <select id="country"></select>
-      <input type="text" id="q" placeholder="输入邮编，如 10001，或地名，如 New York" autocomplete="off">
+      <input type="text" id="q" placeholder="输入邮编、地名或中文，如 10001、New York、北京" autocomplete="off">
       <button class="search-btn" id="go">查询</button>
     </div>
     <div class="examples">
@@ -71,6 +72,7 @@
       <span class="chip" data-cc="FR" data-q="75001">75001 · 法国巴黎</span>
       <span class="chip" data-cc="JP" data-q="100-0001">100-0001 · 日本东京</span>
       <span class="chip" data-cc="CN" data-q="100000">100000 · 中国北京</span>
+      <span class="chip" data-cc="CN" data-q="北京">北京 · 中文搜</span>
     </div>
   </div>
   <div class="stats" id="stats">正在加载国家列表…</div>
@@ -132,10 +134,14 @@ function loadCountry(cc) {
   el("status").textContent = "正在加载数据…";
   el("results").innerHTML = "";
   return fetch("data/" + cc + ".json").then(function (r) { return r.json(); }).then(function (d) {
-    d.records.forEach(function (rec) {
+    d.records.forEach(function (rec, i) {
       rec._n = normCode(rec[0]);
       rec._p = rec[1].toLowerCase();
       rec._a = ((rec[2] || "") + " " + (rec[3] || "") + " " + (rec[4] || "")).toLowerCase();
+      if (d.zh && d.zh[i]) {
+        rec._zh = d.zh[i];
+        rec._z = d.zh[i].join(" ").toLowerCase();
+      }
     });
     cache[cc] = d;
     return d;
@@ -166,6 +172,8 @@ function search() {
       else if (r._p === lq) score = 80;
       else if (r._p.indexOf(lq) === 0) score = 70;
       else if (r._p.indexOf(lq) >= 0) score = 60;
+      else if (r._z && r._z.indexOf(lq) === 0) score = 70;
+      else if (r._z && r._z.indexOf(lq) >= 0) score = 60;
       else if (r._a.indexOf(lq) >= 0) score = 40;
       if (score > 0) hits.push([score, r]);
     }
@@ -194,19 +202,22 @@ function render(hits, total, q, d) {
   box.appendChild(head);
   hits.forEach(function (h) {
     var r = h[1];
-    var admin = [r[4], r[3], r[2]].filter(Boolean).join(" · ");
+    var zh = r._zh || null;
+    var placeMain = zh && zh[0] ? zh[0] : r[1];
+    var placeSub = zh && zh[0] ? r[1] : "";
+    var admin = [(zh && zh[3]) || r[4], (zh && zh[2]) || r[3], (zh && zh[1]) || r[2]].filter(Boolean).join(" · ");
     var div = document.createElement("div");
     div.className = "row";
     div.innerHTML =
       '<div class="code">' + esc(r[0]) + '</div>' +
       '<div class="info">' +
-        '<div class="place">' + mark(r[1], q, false) + '</div>' +
+        '<div class="place">' + mark(placeMain, q, false) + (placeSub ? '<span class="pinyin">' + esc(placeSub) + '</span>' : '') + '</div>' +
         (admin ? '<div class="admin">' + esc(admin) + " · " + esc(d.name) + " " + esc(d.nameEn) + '</div>' : "") +
         '<div class="coords">' + r[5] + ", " + r[6] + '</div>' +
       '</div>' +
       '<div class="actions">' +
         '<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + r[5] + '&mlon=' + r[6] + '#map=13/' + r[5] + '/' + r[6] + '">地图</a>' +
-        '<button data-copy="' + esc(r[0] + " " + r[1] + (admin ? ", " + admin : "") + ", " + r[5] + ", " + r[6]) + '">复制</button>' +
+        '<button data-copy="' + esc(r[0] + " " + placeMain + (placeSub ? " " + placeSub : "") + (admin ? ", " + admin : "") + ", " + r[5] + ", " + r[6]) + '">复制</button>' +
       '</div>';
     box.appendChild(div);
   });
